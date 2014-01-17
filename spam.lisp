@@ -16,15 +16,12 @@
    (total-spams :initform 0
                 :accessor total-spams)))
 
-(defvar *spam-db*)
-
 (defparameter *max-ham-score* .4)
 (defparameter *min-spam-score* .6)
 
 (defun classify (text db)
   "Classify the text of a message as SPAM, HAM, or UNSURE."
   (classification (score (extract-features text db) db)))
-
 
 (defclass word-feature ()
   ((word
