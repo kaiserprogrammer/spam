@@ -6,7 +6,7 @@ Altered to fit my style of programming.
 ## Usage
 
 ```lisp
-(let ((*spam-db* (make-instance 'memory-db)))
-  (train "what the hell" :ham)
-  (classify "normal hell text"))
+(let ((db (make-instance 'spam:memory-db)))
+           (spam:train "what  the hell" :ham db)
+           (spam:classify "normal text hell" db))
 ```

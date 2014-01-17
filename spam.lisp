@@ -21,9 +21,9 @@
 (defparameter *max-ham-score* .4)
 (defparameter *min-spam-score* .6)
 
-(defun classify (text)
+(defun classify (text db)
   "Classify the text of a message as SPAM, HAM, or UNSURE."
-  (classification (score (extract-features text))))
+  (classification (score (extract-features text db) db)))
 
 
 (defclass word-feature ()
@@ -43,9 +43,9 @@
     :initform 0
     :documentation "Number of hams we have seen this feature in.")))
 
-(defun intern-feature (word)
-  (or (gethash word (features *spam-db*))
-      (setf (gethash word (features *spam-db*))
+(defun intern-feature (word db)
+  (or (gethash word (features db))
+      (setf (gethash word (features db))
             (make-instance 'word-feature :word word))))
 
 (defun extract-words (text)
@@ -53,57 +53,57 @@
    (cl-ppcre:all-matches-as-strings "[a-zA-Z]{3,}" text)
    :test #'string=))
 
-(defun extract-features (text)
-  (mapcar #'intern-feature (extract-words text)))
+(defun extract-features (text db)
+  (mapcar (lambda (word) (intern-feature word db)) (extract-words text)))
 
 (defmethod print-object ((object word-feature) stream)
   (print-unreadable-object (object stream :type t)
     (with-slots (word ham-count spam-count) object
       (format stream "~s :hams ~d :spams ~d" word ham-count spam-count))))
 
-(defun train (text type)
-  (dolist (feature (extract-features text))
+(defun train (text type db)
+  (dolist (feature (extract-features text db))
     (increment-count feature type))
-  (increment-total-count type))
+  (increment-total-count type db))
 
 (defun increment-count (feature type)
   (ecase type
     (:ham (incf (ham-count feature)))
     (:spam (incf (spam-count feature)))))
 
-(defun increment-total-count (type)
+(defun increment-total-count (type db)
   (ecase type
-    (:ham (incf (total-hams *spam-db*)))
-    (:spam (incf (total-spams *spam-db*)))))
+    (:ham (incf (total-hams db)))
+    (:spam (incf (total-spams db)))))
 
-(defun spam-probability (feature)
+(defun spam-probability (feature db)
   "Basic probability that a feature with the given relative
 frequencies will appear in a spam assuming spams and hams are
 otherwise equally probable. One of the two frequencies must be
 non-zero."
   (with-slots (spam-count ham-count) feature
-    (let ((spam-frequency (/ spam-count (max 1 (total-spams *spam-db*))))
-          (ham-frequency (/ ham-count (max 1 (total-hams *spam-db*)))))
+    (let ((spam-frequency (/ spam-count (max 1 (total-spams db))))
+          (ham-frequency (/ ham-count (max 1 (total-hams db)))))
       (/ spam-frequency (+ spam-frequency ham-frequency)))))
 
 
-(defun bayesian-spam-probability (feature &optional
+(defun bayesian-spam-probability (feature db &optional
                                   (assumed-probability 1/2)
                                   (weight 1))
   "Bayesian adjustment of a given probability given the number of
 data points that went into it, an assumed probability, and a
 weight we give that assumed probability."
-  (let ((basic-probability (spam-probability feature))
+  (let ((basic-probability (spam-probability feature db))
         (data-points (+ (spam-count feature) (ham-count feature))))
     (/ (+ (* weight assumed-probability)
           (* data-points basic-probability))
        (+ weight data-points))))
 
-(defun score (features)
+(defun score (features db)
   (let ((spam-probs ()) (ham-probs ()) (number-of-probs 0))
     (dolist (feature features)
       (unless (untrained-p feature)
-        (let ((spam-prob (float (bayesian-spam-probability feature) 0.0d0)))
+        (let ((spam-prob (float (bayesian-spam-probability feature db) 0.0d0)))
           (push spam-prob spam-probs)
           (push (- 1.0d0 spam-prob) ham-probs)
           (incf number-of-probs))))
