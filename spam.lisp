@@ -3,8 +3,7 @@
   (:export
    :classify
    :train
-   :memory-db
-   :*spam-db*))
+   :memory-db))
 
 (in-package :spam)
 
