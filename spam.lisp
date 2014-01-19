@@ -20,7 +20,7 @@
 
 (defun classify (text db)
   "Classify the text of a message as SPAM, HAM, or UNSURE."
-  (classification (score (extract-features text db) db)))
+  (classification (score text db)))
 
 (defclass word-feature ()
   ((word
@@ -95,9 +95,9 @@ weight we give that assumed probability."
           (* data-points basic-probability))
        (+ weight data-points))))
 
-(defun score (features db)
+(defun score (text db)
   (let ((spam-probs ()) (ham-probs ()) (number-of-probs 0))
-    (dolist (feature features)
+    (dolist (feature (extract-features text db))
       (unless (untrained-p feature)
         (let ((spam-prob (float (bayesian-spam-probability feature db) 0.0d0)))
           (push spam-prob spam-probs)
